@@ -24,11 +24,28 @@ jobs:
       - name: Build release binary
         run: swift build -c release
 
+      - name: Draw app icon
+        run: |
+          mkdir -p AppIcon.iconset
+          swift Scripts/make_icon.swift AppIcon-1024.png
+          sips -z 16 16 AppIcon-1024.png --out AppIcon.iconset/icon_16x16.png >/dev/null
+          sips -z 32 32 AppIcon-1024.png --out AppIcon.iconset/icon_16x16@2x.png >/dev/null
+          sips -z 32 32 AppIcon-1024.png --out AppIcon.iconset/icon_32x32.png >/dev/null
+          sips -z 64 64 AppIcon-1024.png --out AppIcon.iconset/icon_32x32@2x.png >/dev/null
+          sips -z 128 128 AppIcon-1024.png --out AppIcon.iconset/icon_128x128.png >/dev/null
+          sips -z 256 256 AppIcon-1024.png --out AppIcon.iconset/icon_128x128@2x.png >/dev/null
+          sips -z 256 256 AppIcon-1024.png --out AppIcon.iconset/icon_256x256.png >/dev/null
+          sips -z 512 512 AppIcon-1024.png --out AppIcon.iconset/icon_256x256@2x.png >/dev/null
+          sips -z 512 512 AppIcon-1024.png --out AppIcon.iconset/icon_512x512.png >/dev/null
+          cp AppIcon-1024.png AppIcon.iconset/icon_512x512@2x.png
+          iconutil -c icns AppIcon.iconset -o AppIcon.icns
+
       - name: Assemble app bundle
         run: |
           APP="Launchpad.app"
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
           cp .build/release/Launchpad "$APP/Contents/MacOS/Launchpad"
+          cp AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
           cat > "$APP/Contents/Info.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -37,6 +54,7 @@ jobs:
             <key>CFBundleIdentifier</key><string>com.qdt.launchpad</string>
             <key>CFBundleName</key><string>Launchpad</string>
             <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleIconFile</key><string>AppIcon</string>
             <key>CFBundleShortVersionString</key><string>${GITHUB_REF_NAME}</string>
             <key>LSMinimumSystemVersion</key><string>14.0</string>
             <key>NSHighResolutionCapable</key><true/>
@@ -46,11 +64,20 @@ jobs:
           codesign --force --deep --sign - "$APP"
           ditto -c -k --sequesterRsrc --keepParent "$APP" Launchpad-macOS.zip
 
+      - name: Create drag-to-install DMG
+        run: |
+          mkdir -p dmg-root
+          cp -R Launchpad.app dmg-root/
+          ln -s /Applications dmg-root/Applications
+          hdiutil create -volname "Launchpad" -srcfolder dmg-root -ov -format UDZO Launchpad-macOS.dmg
+
       - name: Upload app bundle
         uses: actions/upload-artifact@v4
         with:
           name: Launchpad-macOS
-          path: Launchpad-macOS.zip
+          path: |
+            Launchpad-macOS.zip
+            Launchpad-macOS.dmg
           if-no-files-found: error
           retention-days: 14
 
@@ -58,4 +85,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: Launchpad-macOS.zip
+          files: |
+            Launchpad-macOS.zip
+            Launchpad-macOS.dmg
