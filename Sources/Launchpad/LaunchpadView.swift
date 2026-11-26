@@ -171,16 +171,17 @@ struct AppTileDropDelegate: DropDelegate {
         guard let provider = info.itemProviders(for: [.text]).first else { return false }
         let x = info.location.x
         _ = provider.loadObject(ofClass: NSString.self) { value, _ in
-            guard let source = value as String? else { return }
+            guard let source = value as? NSString else { return }
+            let sourceID = source as String
             DispatchQueue.main.async {
                 if catalog.layout.folders.contains(where: { $0.id == target }) {
-                    catalog.move(source, to: target)
+                    catalog.move(sourceID, to: target)
                 } else if x < width * 0.28 {
-                    catalog.reorder(source, before: target)
+                    catalog.reorder(sourceID, before: target)
                 } else if x > width * 0.72 {
-                    catalog.reorderAfter(source, target: target)
+                    catalog.reorderAfter(sourceID, target: target)
                 } else {
-                    catalog.move(source, to: target)
+                    catalog.move(sourceID, to: target)
                 }
             }
         }
