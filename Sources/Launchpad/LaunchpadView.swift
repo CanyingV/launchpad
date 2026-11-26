@@ -40,7 +40,7 @@ final class AppCatalog: ObservableObject {
     }
 
     func open(_ app: InstalledApp) {
-        NSWorkspace.shared.openApplication(at: app.url, configuration: NSWorkspace.OpenConfiguration())
+        NSWorkspace.shared.openApplication(at: app.url, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
     }
 }
 
